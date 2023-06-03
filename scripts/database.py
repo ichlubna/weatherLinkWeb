@@ -61,26 +61,36 @@ class Database:
             password = self.credentials.password,
             database = self.credentials.database)
 
-    def createTable(self):
-        command = "CREATE TABLE "+self.table.name+"("+self.table.header+");"
+    def executeCommand(self, command):
         if self.debug == True:
-            print(command)
-        self.database.cursor().execute(command)
+            print(command) 
+        cursor = self.database.cursor()#(buffered=True)
+        cursor.execute(command)
+        result = cursor.fetchone()
+        resultString = ""
+        if result != None:
+            resultString = result[0]
+        if self.debug == True:
+            print(resultString)
+        return resultString
+
+    def createTable(self):
+        self.executeCommand("CREATE TABLE "+self.table.name+"("+self.table.header+", PRIMARY KEY(DateTime));")
 
     def insert(self, record):
-        values = record.split()
-        valuesString = ','.join(values)
-        valuesString = valuesString.replace(",", " ", 1)
-        valuesString = valuesString.replace("---", "NULL")
-        command = "INSERT INTO "+self.table.name+" VALUES ("+valuesString+");"
-        if self.debug == True:
-            print(command)
-        self.database.cursor().execute(command)
+        record = ["\""+str(v)+"\"" if type(v) == str else v for v in record]
+        record = ['NULL' if v is None else v for v in record]
+        valuesString = ','.join([str(i) for i in record])
+        self.executeCommand("INSERT INTO "+self.table.name+" VALUES ("+valuesString+");")
+        self.database.commit()
+    
+    def insertMany(self, records):
+        valuesString = ("%s, "*len(records[0]))[:-2]
+        cursor = self.database.cursor()
+        cursor.executemany("INSERT INTO "+self.table.name+" VALUES ("+valuesString+");", [tuple(x) for x in records])
+        self.database.commit()
     
     def getLastTimestamp(self):
         command = "SELECT DateTime FROM "+self.table.name+" ORDER BY DateTime DESC LIMIT 1"
-        command = "SELECT * FROM `WeatherHistory` WHERE 1"
-        cursor = self.database.cursor(buffered=True)
-        cursor.execute(command)
-        return cursor.fetchall()[0][0]
+        return self.executeCommand(command)
 
