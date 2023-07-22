@@ -59,7 +59,8 @@ class Database:
             port = self.credentials.port,
             user = self.credentials.userName,
             password = self.credentials.password,
-            database = self.credentials.database)
+            database = self.credentials.database,
+            connect_timeout = 5)
 
     def executeCommand(self, command):
         if self.debug == True:
@@ -94,3 +95,5 @@ class Database:
         command = "SELECT DateTime FROM "+self.table.name+" ORDER BY DateTime DESC LIMIT 1"
         return self.executeCommand(command)
 
+    def disconnect(self)
+        self.database.close()
