@@ -23,22 +23,44 @@ class Reporter extends Credentials
 		return $dateTime;
 	}
 	
-	function printLatestData()
+	function printOneRecord($record)
 	{
-		$sql = "SELECT * FROM WeatherHistory ORDER BY DateTime desc LIMIT 1";
-		$result = $this->conn->query($sql);
-
+		$dateTime = new DateTime($record["DateTime"]);
+		$dateTime = $this->fixTime($dateTime);
+		$stringDateTime = $dateTime->format('d.m.Y H:i');
+		//The temperature at the station is under Temp2nd in our case
+		echo $stringDateTime . " - Temp: " . $record["Temp2nd"] . "<br>";
+	}
+	
+	function sendQuery($query)
+	{
+		$result = $this->conn->query($query);
+		if (!$result) 
+			echo("Error: ".$this->conn->error);
+		return $result;
+	}
+	
+	function printResult($result)
+	{
 		if ($result->num_rows > 0)
 			while($row = $result->fetch_assoc()) 
-			{
-				$dateTime = new DateTime($row["DateTime"]);
-				$dateTime = $this->fixTime($dateTime);
-				$stringDateTime = $dateTime->format('d.m.Y H:i');
-				//The temperature at the station is under Temp2nd in our case
-				echo $stringDateTime . " - Temp: " . $row["Temp2nd"] . "<br>";
-			}
+				$this->printOneRecord($row);
 		else 
-		  echo "Nothing to print.";
+			echo "Nothing to print.";
+	}
+	
+	function printLatestData($count=1)
+	{
+		$sql = "SELECT * FROM WeatherHistory ORDER BY DateTime desc LIMIT ".$count;
+		$result = $this->sendQuery($sql);
+		$this->printResult($result);
+	}
+	
+	function printDays($firstDate, $lastDate)
+	{
+		$sql = "SELECT * FROM WeatherHistory WHERE DateTime BETWEEN '".$firstDate."' AND '".$lastDate."' ORDER BY DateTime desc";
+		$result = $this->sendQuery($sql);
+		$this->printResult($result);
 	}
 }
 ini_set('display_errors', '1');
@@ -46,4 +68,5 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 $reporter = new Reporter();
 $reporter->printLatestData();
+$reporter->printDays("2023-01-01", "2023-02-20");
 ?>
