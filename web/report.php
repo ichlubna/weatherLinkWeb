@@ -1,21 +1,49 @@
 <?php 
 include("./mysql.php");
-$conn = new mysqli($host, $userName, $password, $database);
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
-
-$sql = "SELECT * FROM WeatherHistory ORDER BY DateTime desc LIMIT 1";
-$result = $conn->query($sql);
-
-if ($result->num_rows > 0) {
-  while($row = $result->fetch_assoc()) {
+class Reporter extends Credentials
+{
+	private $conn;
 	
-    $dateTime = date( 'd.m.Y H:i', strtotime($row["DateTime"]));
-    echo $dateTime . " - Temp: " . $row["Temp2nd"] . "<br>";
-  }
-} else {
-  echo "Nothing to print.";
+	function __construct()
+	{
+		$this->conn = new mysqli($this->host, $this->userName, $this->password, $this->database);
+		if ($this->conn->connect_error) 
+			die("Connection failed: " . $this->conn->connect_error);
+	}
+	
+	function __destruct() 
+	{
+		$this->conn->close();
+	}
+	
+	//The time might be different on the station so the corrections can be made here
+	function fixTime($dateTime)
+	{
+		$dateTime->add(new DateInterval('PT5H25M0S'));
+		return $dateTime;
+	}
+	
+	function printLatestData()
+	{
+		$sql = "SELECT * FROM WeatherHistory ORDER BY DateTime desc LIMIT 1";
+		$result = $this->conn->query($sql);
+
+		if ($result->num_rows > 0)
+			while($row = $result->fetch_assoc()) 
+			{
+				$dateTime = new DateTime($row["DateTime"]);
+				$dateTime = $this->fixTime($dateTime);
+				$stringDateTime = $dateTime->format('d.m.Y H:i');
+				//The temperature at the station is under Temp2nd in our case
+				echo $stringDateTime . " - Temp: " . $row["Temp2nd"] . "<br>";
+			}
+		else 
+		  echo "Nothing to print.";
+	}
 }
-$conn->close();
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+$reporter = new Reporter();
+$reporter->printLatestData();
 ?>
